@@ -199,16 +199,16 @@
     function processSearchQuery(query) {
       // Check if it starts with http:// or https://
       if (query.startsWith('http://') || query.startsWith('https://')) {
-        return `/active/embed.html?url=${query}`;
+        return `active/embed.html?url=${query}`;
       }
       
       // Check if it looks like a domain (contains a dot and no spaces)
       if (query.includes('.') && !query.includes(' ')) {
-        return `/active/embed.html?url=https://${query}`;
+        return `active/embed.html?url=https://${query}`;
       }
       
       // Otherwise treat as a search query
-      return `/active/embed.html?url=https://www.google.com/search?q=${encodeURIComponent(query)}`;
+      return `active/embed.html?url=https://www.google.com/search?q=${encodeURIComponent(query)}`;
     }
   </script>
 </body>
