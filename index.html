@@ -377,6 +377,45 @@
     const backBtn = document.getElementById('backBtn');
     const refreshBtn = document.getElementById('refreshBtn');
 
+    function setupIframeListener(tabId, iframeEl) {
+      try {
+        const doc = iframeEl.contentDocument || iframeEl.contentWindow?.document;
+        if (!doc) return;
+
+        // Update title from iframe
+        const observer = new MutationObserver(() => {
+          const title = doc.title || 'New Tab';
+          const tab = tabs.find(t => t.id === tabId);
+          if (tab) {
+            tab.title = title;
+            if (tabId === activeTabId) {
+              renderTabs();
+            }
+          }
+        });
+
+        observer.observe(doc.head || doc, { childList: true, subtree: true });
+
+        // Get favicon from iframe
+        const getFavicon = () => {
+          const link = doc.querySelector("link[rel='icon']") || doc.querySelector("link[rel='shortcut icon']");
+          const tab = tabs.find(t => t.id === tabId);
+          if (tab && link?.href) {
+            tab.favicon = link.href;
+            if (tabId === activeTabId) {
+              renderTabs();
+            }
+          }
+        };
+
+        // Try to get favicon immediately and after load
+        iframeEl.addEventListener('load', getFavicon);
+        getFavicon();
+      } catch (e) {
+        console.log('[v0] Could not setup iframe listener (cross-origin)');
+      }
+    }
+
     function createTab(url = null) {
       const tabId = ++tabIdCounter;
       const tab = {
@@ -444,10 +483,12 @@
         tabEl.className = `tab ${tab.id === activeTabId ? 'active' : ''}`;
         tabEl.onclick = () => setActiveTab(tab.id);
         
+        const faviconSrc = tab.isNewTab ? 'favicon2.png' : tab.favicon;
+        
         tabEl.innerHTML = `
           <div class="tab-favicon">
-            ${tab.favicon 
-              ? `<img src="${tab.favicon}" onerror="this.parentElement.innerHTML='<div class=\\'default-icon\\'></div>'">`
+            ${faviconSrc 
+              ? `<img src="${faviconSrc}" onerror="this.parentElement.innerHTML='<div class=\\'default-icon\\'></div>'">`
               : '<div class="default-icon"></div>'
             }
           </div>
@@ -475,6 +516,10 @@
           
           if (tab.isNewTab) {
             contentEl.innerHTML = `<iframe src="newtab.html" id="iframe-${tab.id}"></iframe>`;
+            setTimeout(() => {
+              const iframeEl = document.getElementById(`iframe-${tab.id}`);
+              if (iframeEl) setupIframeListener(tab.id, iframeEl);
+            }, 100);
           }
           
           contentArea.appendChild(contentEl);
@@ -538,6 +583,11 @@
           tab.favicon = null;
         }
         
+        setTimeout(() => {
+          const iframeEl = document.getElementById(`iframe-${tabId}`);
+          if (iframeEl) setupIframeListener(tabId, iframeEl);
+        }, 100);
+        
         renderTabs();
       }
       
@@ -582,6 +632,11 @@
                 }
                 
                 renderTabs();
+                
+                setTimeout(() => {
+                  const iframeEl = document.getElementById(`iframe-${activeTabId}`);
+                  if (iframeEl) setupIframeListener(activeTabId, iframeEl);
+                }, 100);
               }
             }
           }
