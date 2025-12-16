@@ -37,7 +37,6 @@
       min-height: 42px;
     }
 
-    /* Removed dropdown-btn styles */
 
     .tabs-container {
       display: flex;
@@ -539,18 +538,18 @@
       
       // Check if it's already a full URL with protocol
       if (input.startsWith('http://') || input.startsWith('https://')) {
-        return `/active/embed.html?url=${input}`;
+        return `active/embed.html?url=${input}`;
       }
       
       // Check if it looks like a domain (contains dot and no spaces)
       const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*(\.[a-zA-Z0-9-]+)+/;
       if (domainRegex.test(input) && !input.includes(' ')) {
-        return `/active/embed.html?url=https://${input}`;
+        return `active/embed.html?url=https://${input}`;
       }
       
       // Treat as search query
       const encodedQuery = encodeURIComponent(input);
-      return `/active/embed.html?url=https://www.google.com/search?q=${encodedQuery}`;
+      return `active/embed.html?url=https://www.google.com/search?q=${encodedQuery}`;
     }
 
     function navigateTab(tabId, url) {
