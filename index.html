@@ -37,23 +37,7 @@
       min-height: 42px;
     }
 
-    .dropdown-btn {
-      width: 28px;
-      height: 28px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 4px;
-      margin-bottom: 6px;
-    }
-
-    .dropdown-btn svg {
-      width: 16px;
-      height: 16px;
-    }
+    /* Removed dropdown-btn styles */
 
     .tabs-container {
       display: flex;
@@ -71,7 +55,7 @@
       min-width: 180px;
       max-width: 240px;
       height: 34px;
-      background: #d4d4d400;
+      background: #d4d4d4;
       cursor: pointer;
       user-select: none;
       border-radius: 8px 8px 0 0;
@@ -244,21 +228,7 @@
       font-size: 14px;
     }
 
-    .menu-btn {
-      width: 32px;
-      height: 32px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-    }
-
-    .menu-btn:hover {
-      background: #f0f0f0;
-    }
+    /* Removed menu-btn styles */
 
     /* Content Area */
     .content-area {
@@ -285,22 +255,6 @@
       width: 100%;
       height: 100%;
       border: none;
-    }
-
-    .new-tab-page {
-      width: 100%;
-      height: 100%;
-      background: #d9d9d9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .new-tab-page h2 {
-      color: #666;
-      font-weight: 400;
     }
 
     /* Status Bar */
@@ -346,6 +300,7 @@
       height: 100%;
       background: #333;
       border-radius: 1px;
+      transition: width 0.3s;
     }
 
     .time-date {
@@ -358,11 +313,7 @@
   <div class="browser-container">
     <!-- Tab Bar -->
     <div class="tab-bar">
-      <button class="dropdown-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
-      </button>
+      <!-- Removed dropdown button -->
       <div class="tabs-container" id="tabsContainer"></div>
       <button class="new-tab-btn" id="newTabBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -392,13 +343,7 @@
         </svg>
         <input type="text" class="address-input" id="addressInput" placeholder="Search or enter URL">
       </div>
-      <button class="menu-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="1"></circle>
-          <circle cx="12" cy="5" r="1"></circle>
-          <circle cx="12" cy="19" r="1"></circle>
-        </svg>
-      </button>
+      <!-- Removed 3-dots menu button -->
     </div>
 
     <!-- Content Area -->
@@ -408,9 +353,9 @@
     <div class="status-bar">
       <div class="battery">
         <div class="battery-icon">
-          <div class="battery-level" style="width: 56%"></div>
+          <div class="battery-level" id="batteryLevel" style="width: 100%"></div>
         </div>
-        <span>56%</span>
+        <span id="batteryPercent">100%</span>
       </div>
       <div class="time-date">
         <span id="currentTime"></span>
@@ -529,7 +474,7 @@
           contentEl.className = `tab-content ${tab.id === activeTabId ? 'active' : ''}`;
           
           if (tab.isNewTab) {
-            contentEl.innerHTML = `<div class="new-tab-page"></div>`;
+            contentEl.innerHTML = `<iframe src="newtab.html" id="iframe-${tab.id}"></iframe>`;
           }
           
           contentArea.appendChild(contentEl);
@@ -610,6 +555,40 @@
       }
     }
 
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'navigate' && event.data.url) {
+        if (activeTabId) {
+          const tab = tabs.find(t => t.id === activeTabId);
+          if (tab) {
+            const contentEl = document.getElementById(`content-${activeTabId}`);
+            if (contentEl) {
+              contentEl.innerHTML = `<iframe src="${event.data.url}" id="iframe-${activeTabId}"></iframe>`;
+              
+              // Extract the URL from the embed URL
+              const urlMatch = event.data.url.match(/url=(.+)/);
+              if (urlMatch) {
+                const decodedUrl = decodeURIComponent(urlMatch[1]);
+                tab.url = decodedUrl;
+                tab.isNewTab = false;
+                addressInput.value = decodedUrl;
+                
+                // Update title and favicon
+                tab.title = decodedUrl;
+                try {
+                  const domain = new URL(decodedUrl).hostname;
+                  tab.favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+                } catch (e) {
+                  tab.favicon = null;
+                }
+                
+                renderTabs();
+              }
+            }
+          }
+        }
+      }
+    });
+
     // Event Listeners
     newTabBtn.addEventListener('click', () => createTab());
     
@@ -652,8 +631,29 @@
       document.getElementById('currentYear').textContent = now.getFullYear();
     }
 
+    function updateBattery(battery) {
+      const level = Math.round(battery.level * 100);
+      document.getElementById('batteryLevel').style.width = level + '%';
+      document.getElementById('batteryPercent').textContent = level + '%';
+    }
+
+    async function initBattery() {
+      if ('getBattery' in navigator) {
+        try {
+          const battery = await navigator.getBattery();
+          updateBattery(battery);
+          
+          battery.addEventListener('levelchange', () => updateBattery(battery));
+          battery.addEventListener('chargingchange', () => updateBattery(battery));
+        } catch (e) {
+          console.log('Battery API not available');
+        }
+      }
+    }
+
     updateTime();
     setInterval(updateTime, 1000);
+    initBattery();
 
     // Initialize with one tab
     createTab();
